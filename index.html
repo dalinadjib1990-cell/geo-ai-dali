@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geo AI Dali - تطبيق الهندسة التفاعلي</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2ecc71;
+            --dark-bg: #1a1a2e;
+            --darker-bg: #16213e;
+            --light-text: #ecf0f1;
+            --compass-red: #e74c3c;
+            --compass-blue: #3498db;
+            --compass-gold: #f1c40f;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--dark-bg);
+            color: var(--light-text);
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background-color: var(--darker-bg);
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 1px solid #34495e;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .toolbar {
+            background-color: var(--darker-bg);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #34495e;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0f3460;
+        }
+        
+        .tools-panel {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .tool {
+            width: 60px;
+            height: 60px;
+            background-color: #34495e;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .tool.active {
+            border-color: var(--secondary);
+        }
+        
+        .tool:hover {
+            transform: translateY(-5px);
+        }
+        
+        .tool img {
+            width: 40px;
+            height: 40px;
+        }
+        
+        .control-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #34495e;
+            border-radius: 10px;
+        }
+        
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #27ae60;
+        }
+        
+        .shape-list {
+            margin-top: 20px;
+        }
+        
+        .shape-item {
+            padding: 10px;
+            background-color: #34495e;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .shape-item:hover {
+            background-color: #2c3e50;
+        }
+        
+        .shape-item.active {
+            background-color: var(--primary);
+        }
+        
+        .properties-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #34495e;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .properties-panel.active {
+            display: block;
+        }
+        
+        .step-controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .speed-control {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .speed-control label {
+            margin-right: 10px;
+        }
+        
+        .compass {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            z-index: 10;
+            display: none;
+        }
+        
+        .compass.active {
+            display: block;
+        }
+        
+        .compass-body {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: #f8f8f8;
+            border: 2px solid #333;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        
+        .compass-needle {
+            position: absolute;
+            width: 5px;
+            height: 90px;
+            background-color: var(--compass-red);
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            transform-origin: bottom center;
+        }
+        
+        .compass-pencil {
+            position: absolute;
+            width: 4px;
+            height: 120px;
+            background-color: var(--compass-blue);
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            transform-origin: bottom center;
+        }
+        
+        .compass-center {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: var(--compass-gold);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+        }
+        
+        .ruler {
+            position: absolute;
+            height: 40px;
+            background-color: #f8f8f8;
+            border: 1px solid #333;
+            display: none;
+            z-index: 10;
+        }
+        
+        .ruler.active {
+            display: block;
+        }
+        
+        .ruler-markings {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .ruler-mark {
+            height: 100%;
+            width: 1px;
+            background-color: #333;
+            position: absolute;
+        }
+        
+        .ruler-number {
+            position: absolute;
+            font-size: 12px;
+            color: #333;
+            top: 20px;
+        }
+        
+        .protractor {
+            position: absolute;
+            width: 200px;
+            height: 100px;
+            border-radius: 100px 100px 0 0;
+            border: 2px solid #333;
+            border-bottom: none;
+            background-color: rgba(248, 248, 248, 0.8);
+            display: none;
+            z-index: 10;
+        }
+        
+        .protractor.active {
+            display: block;
+        }
+        
+        .step-indicator {
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .instructions {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #2c3e50;
+            border-radius: 5px;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="toolbar">
+                <h1>Geo AI Dali</h1>
+                <div>
+                    <button id="manual-mode" class="btn">التحكم اليدوي</button>
+                    <button id="auto-mode" class="btn btn-secondary">الوضع التلقائي</button>
+                </div>
+            </div>
+            <div class="canvas-container">
+                <canvas id="drawing-canvas"></canvas>
+                <div class="compass" id="compass">
+                    <div class="compass-body"></div>
+                    <div class="compass-needle" id="compass-needle"></div>
+                    <div class="compass-pencil" id="compass-pencil"></div>
+                    <div class="compass-center"></div>
+                </div>
+                <div class="ruler" id="ruler">
+                    <div class="ruler-markings" id="ruler-markings"></div>
+                </div>
+                <div class="protractor" id="protractor"></div>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="tools-panel">
+                <div class="tool active" id="tool-compass" title="المدور">
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="#3498db">
+                        <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6Z" />
+                    </svg>
+                </div>
+                <div class="tool" id="tool-ruler" title="المسطرة">
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="#3498db">
+                        <path d="M3,4H5V10H7V4H9V10H11V4H13V10H15V4H17V10H19V4H21V20H19V16H17V20H15V16H13V20H11V16H9V20H7V16H5V20H3V4Z" />
+                    </svg>
+                </div>
+                <div class="tool" id="tool-protractor" title="المنقلة">
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="#3498db">
+                        <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12C20,14.36 19,16.5 17.34,18C15.8,16.5 14,15.59 12,15.59C10,15.59 8.2,16.5 6.66,18C5,16.5 4,14.36 4,12A8,8 0 0,1 12,4M12,7.45C10.32,7.45 8.96,8.71 8.96,10.29C8.96,11.87 10.32,13.13 12,13.13C13.68,13.13 15.04,11.87 15.04,10.29C15.04,8.71 13.68,7.45 12,7.45Z" />
+                    </svg>
+                </div>
+                <div class="tool" id="tool-pencil" title="القلم">
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="#3498db">
+                        <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" />
+                    </svg>
+                </div>
+            </div>
+            
+            <div class="control-panel">
+                <h3>أدوات التحكم</h3>
+                <div>
+                    <button id="fix-compass" class="btn">تثبيت المدور</button>
+                    <button id="measure-length" class="btn">قياس الطول</button>
+                    <button id="draw-arc" class="btn">رسم قوس</button>
+                </div>
+                <div class="speed-control">
+                    <label for="speed-control">سرعة الرسم:</label>
+                    <input type="range" id="speed-control" min="1" max="10" value="5">
+                </div>
+            </div>
+            
+            <div class="shape-list">
+                <h3>الأشكال الهندسية</h3>
+                <div class="shape-item active" data-shape="equilateral-triangle">مثلث متساوي الأضلاع</div>
+                <div class="shape-item" data-shape="isosceles-triangle">مثلث متساوي الساقين</div>
+                <div class="shape-item" data-shape="right-triangle">مثلث قائم الزاوية</div>
+                <div class="shape-item" data-shape="square">مربع</div>
+                <div class="shape-item" data-shape="rectangle">مستطيل</div>
+                <div class="shape-item" data-shape="rhombus">معين</div>
+            </div>
+            
+            <div class="step-controls">
+                <button id="prev-step" class="btn">السابق</button>
+                <button id="next-step" class="btn btn-secondary">التالي</button>
+            </div>
+            
+            <div class="step-indicator">
+                الخطوة <span id="current-step">1</span> من <span id="total-steps">5</span>
+            </div>
+            
+            <div class="instructions" id="instructions">
+                اختر شكلاً هندسياً لبدء عملية الرسم. اضغط على "التالي" للمتابعة في الخطوات.
+            </div>
+            
+            <button id="show-properties" class="btn" style="width: 100%; margin-top: 20px;">عرض الخصائص</button>
+            
+            <div class="properties-panel" id="properties-panel">
+                <h3>خصائص الشكل</h3>
+                <div id="properties-content">
+                    <!-- سيتم ملء هذا القسم ديناميكياً -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // العناصر الأساسية
+            const canvas = document.getElementById('drawing-canvas');
+            const ctx = canvas.getContext('2d');
+            const compass = document.getElementById('compass');
+            const ruler = document.getElementById('ruler');
+            const protractor = document.getElementById('protractor');
+            const instructions = document.getElementById('instructions');
+            const currentStepEl = document.getElementById('current-step');
+            const totalStepsEl = document.getElementById('total-steps');
+            const propertiesPanel = document.getElementById('properties-panel');
+            const propertiesContent = document.getElementById('properties-content');
+            
+            // المتغيرات العامة
+            let currentShape = 'equilateral-triangle';
+            let currentStep = 1;
+            let totalSteps = 5;
+            let isManualMode = false;
+            let isCompassFixed = false;
+            let drawingHistory = [];
+            
+            // تهيئة الكانفاس
+            function initCanvas() {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                drawGrid();
+            }
+            
+            // رسم شبكة الخلفية
+            function drawGrid() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.lineWidth = 1;
+                
+                // رسم الخطوط الأفقية
+                for (let y = 0; y < canvas.height; y += 20) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+                
+                // رسم الخطوط العمودية
+                for (let x = 0; x < canvas.width; x += 20) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+            }
+            
+            // تحديث الخطوات والتعليمات
+            function updateStep() {
+                currentStepEl.textContent = currentStep;
+                totalStepsEl.textContent = totalSteps;
+                
+                // تحديث التعليمات بناءً على الشكل والخطوة الحالية
+                updateInstructions();
+                
+                // إعادة رسم الكانفاس
+                drawGrid();
+                redrawShape();
+            }
+            
+            // تحديث التعليمات
+            function updateInstructions() {
+                let instructionText = '';
+                
+                switch(currentShape) {
+                    case 'equilateral-triangle':
+                        totalSteps = 5;
+                        switch(currentStep) {
+                            case 1:
+                                instructionText = 'الخطوة 1: ارسم قطعة مستقيمة AB باستخدام المسطرة. حدد الطول (مثلاً 5 سم).';
+                                showRuler();
+                                break;
+                            case 2:
+                                instructionText = 'الخطوة 2: ضع شوكة المدور عند النقطة A وارسم قوساً بنصف قطر يساوي طول AB.';
+                                showCompass();
+                                break;
+                            case 3:
+                                instructionText = 'الخطوة 3: ضع شوكة المدور عند النقطة B وارسم قوساً بنفس نصف القطر.';
+                                showCompass();
+                                break;
+                            case 4:
+                                instructionText = 'الخطوة 4: صل نقطة تقاطع القوسين بالنقطتين A و B لتشكيل المثلث ABC.';
+                                break;
+                            case 5:
+                                instructionText = 'الخطوة 5: ضع علامات التطابق على الأضلاع المتساوية والزوايا.';
+                                break;
+                        }
+                        break;
+                    case 'isosceles-triangle':
+                        totalSteps = 5;
+                        switch(currentStep) {
+                            case 1:
+                                instructionText = 'الخطوة 1: ارقطعة مستقيمة AB (القاعدة).';
+                                showRuler();
+                                break;
+                            case 2:
+                                instructionText = 'الخطوة 2: ارسم منصفاً للزاوية عند النقطة A باستخدام المدور.';
+                                showCompass();
+                                break;
+                            case 3:
+                                instructionText = 'الخطوة 3: ارسم منصفاً للزاوية عند النقطة B باستخدام المدور.';
+                                showCompass();
+                                break;
+                            case 4:
+                                instructionText = 'الخطوة 4: صل نقطة تقاطع المنصفين بالنقطتين A و B.';
+                                break;
+                            case 5:
+                                instructionText = 'الخطوة 5: ضع علامات التطابق على الأضلاع المتساوية.';
+                                break;
+                        }
+                        break;
+                    // يمكن إضافة حالات أخرى للأشكال المختلفة
+                    default:
+                        instructionText = 'اختر شكلاً هندسياً لبدء عملية الرسم.';
+                }
+                
+                instructions.textContent = instructionText;
+                updateStep();
+            }
+            
+            // إظهار وإخفاء الأدوات
+            function showCompass() {
+                compass.classList.add('active');
+                ruler.classList.remove('active');
+                protractor.classList.remove('active');
+                
+                // وضع المدور في مكان مناسب على الشاشة
+                compass.style.left = '50%';
+                compass.style.top = '50%';
+            }
+            
+            function showRuler() {
+                ruler.classList.add('active');
+                compass.classList.remove('active');
+                protractor.classList.remove('active');
+                
+                // وضع المسطرة في مكان مناسب على الشاشة
+                ruler.style.left = '20%';
+                ruler.style.top = '40%';
+                ruler.style.width = '300px';
+                ruler.style.transform = 'rotate(0deg)';
+                
+                // إنشاء علامات القياس على المسطرة
+                createRulerMarkings();
+            }
+            
+            function showProtractor() {
+                protractor.classList.add('active');
+                compass.classList.remove('active');
+                ruler.classList.remove('active');
+                
+                // وضع المنقلة في مكان مناسب على الشاشة
+                protractor.style.left = '50%';
+                protractor.style.top = '40%';
+            }
+            
+            function createRulerMarkings() {
+                const markingsContainer = document.getElementById('ruler-markings');
+                markingsContainer.innerHTML = '';
+                
+                // إنشاء علامات القياس (كل 1 سم)
+                for (let i = 0; i <= 30; i++) {
+                    const mark = document.createElement('div');
+                    mark.className = 'ruler-mark';
+                    mark.style.left = `${i * 10}px`;
+                    
+                    if (i % 5 === 0) {
+                        mark.style.height = '100%';
+                        
+                        // إضافة الأرقام
+                        const number = document.createElement('div');
+                        number.className = 'ruler-number';
+                        number.textContent = i / 5;
+                        number.style.left = `${i * 10 - 5}px`;
+                        markingsContainer.appendChild(number);
+                    } else if (i % 1 === 0) {
+                        mark.style.height = '70%';
+                    }
+                    
+                    markingsContainer.appendChild(mark);
+                }
+            }
+            
+            // إعادة رسم الشكل الحالي
+            function redrawShape() {
+                // في التطبيق الكامل، سيتم رسم الشكل بناءً على الخطوة الحالية
+                // هذا مجرد مثال مبسط
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                
+                switch(currentShape) {
+                    case 'equilateral-triangle':
+                        drawEquilateralTriangle();
+                        break;
+                    case 'isosceles-triangle':
+                        drawIsoscelesTriangle();
+                        break;
+                    // يمكن إضافة حالات أخرى للأشكال المختلفة
+                }
+            }
+            
+            // رسم مثلث متساوي الأضلاع (مثال مبسط)
+            function drawEquilateralTriangle() {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const size = 150;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY - size / 2);
+                ctx.lineTo(centerX - size / 2, centerY + size / 2);
+                ctx.lineTo(centerX + size / 2, centerY + size / 2);
+                ctx.closePath();
+                ctx.stroke();
+                
+                // إضافة التسميات
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px Arial';
+                ctx.fillText('A', centerX, centerY - size / 2 - 10);
+                ctx.fillText('B', centerX - size / 2 - 10, centerY + size / 2 + 10);
+                ctx.fillText('C', centerX + size / 2 + 10, centerY + size / 2 + 10);
+                
+                // في الخطوات المتقدمة، إضافة علامات التطابق
+                if (currentStep >= 4) {
+                    // إضافة علامات التطابق على الأضلاع
+                    drawCongruenceMark(centerX, centerY - size / 2, centerX - size / 2, centerY + size / 2);
+                    drawCongruenceMark(centerX - size / 2, centerY + size / 2, centerX + size / 2, centerY + size / 2);
+                    drawCongruenceMark(centerX + size / 2, centerY + size / 2, centerX, centerY - size / 2);
+                }
+            }
+            
+            // رسم مثلث متساوي الساقين (مثال مبسط)
+            function drawIsoscelesTriangle() {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const base = 200;
+                const height = 150;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY - height / 2);
+                ctx.lineTo(centerX - base / 2, centerY + height / 2);
+                ctx.lineTo(centerX + base / 2, centerY + height / 2);
+                ctx.closePath();
+                ctx.stroke();
+                
+                // إضافة التسميات
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px Arial';
+                ctx.fillText('A', centerX, centerY - height / 2 - 10);
+                ctx.fillText('B', centerX - base / 2 - 10, centerY + height / 2 + 10);
+                ctx.fillText('C', centerX + base / 2 + 10, centerY + height / 2 + 10);
+                
+                // في الخطوات المتقدمة، إضافة علامات التطابق
+                if (currentStep >= 4) {
+                    // إضافة علامات التطابق على الأضلاع المتساوية
+                    drawCongruenceMark(centerX, centerY - height / 2, centerX - base / 2, centerY + height / 2);
+                    drawCongruenceMark(centerX, centerY - height / 2, centerX + base / 2, centerY + height / 2);
+                }
+            }
+            
+            // رسم علامة التطابق على ضلع
+            function drawCongruenceMark(x1, y1, x2, y2) {
+                const midX = (x1 + x2) / 2;
+                const midY = (y1 + y2) / 2;
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                const length = 10;
+                
+                ctx.save();
+                ctx.translate(midX, midY);
+                ctx.rotate(angle);
+                
+                ctx.beginPath();
+                ctx.moveTo(-length / 2, -5);
+                ctx.lineTo(length / 2, -5);
+                ctx.stroke();
+                
+                ctx.restore();
+            }
+            
+            // عرض خصائص الشكل
+            function showProperties() {
+                let propertiesText = '';
+                
+                switch(currentShape) {
+                    case 'equilateral-triangle':
+                        propertiesText = `
+                            <p><strong>خصائص المثلث متساوي الأضلاع:</strong></p>
+                            <ul>
+                                <li>جميع الأضلاع متساوية الطول: AB = BC = CA</li>
+                                <li>جميع الزوايا متساوية القياس: ∠A = ∠B = ∠C = 60°</li>
+                                <li>له ثلاثة محاور تناظر</li>
+                                <li>مركز الدائرة المحيطة يتطابق مع مركز الدائرة الداخلية</li>
+                                <li>يمكن إنشاؤه باستخدام المدور والمسطرة فقط</li>
+                            </ul>
+                        `;
+                        break;
+                    case 'isosceles-triangle':
+                        propertiesText = `
+                            <p><strong>خصائص المثلث متساوي الساقين:</strong></p>
+                            <ul>
+                                <li>له ضلعان متساويان في الطول: AB = AC</li>
+                                <li>الزوايا عند القاعدة متساوية: ∠B = ∠C</li>
+                                <li>له محور تناظر واحد يمر من الرأس A إلى منتصف القاعدة BC</li>
+                                <li>الارتفاع من الرأس A ينصف القاعدة BC</li>
+                                <li>الارتفاع من الرأس A ينصف الزاوية A</li>
+                            </ul>
+                        `;
+                        break;
+                    // يمكن إضافة حالات أخرى للأشكال المختلفة
+                }
+                
+                propertiesContent.innerHTML = propertiesText;
+                propertiesPanel.classList.add('active');
+            }
+            
+            // إعداد معالجات الأحداث
+            function setupEventListeners() {
+                // اختيار الشكل
+                document.querySelectorAll('.shape-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        document.querySelectorAll('.shape-item').forEach(i => i.classList.remove('active'));
+                        this.classList.add('active');
+                        currentShape = this.getAttribute('data-shape');
+                        currentStep = 1;
+                        updateStep();
+                        propertiesPanel.classList.remove('active');
+                    });
+                });
+                
+                // التحكم في الخطوات
+                document.getElementById('prev-step').addEventListener('click', function() {
+                    if (currentStep > 1) {
+                        currentStep--;
+                        updateStep();
+                    }
+                });
+                
+                document.getElementById('next-step').addEventListener('click', function() {
+                    if (currentStep < totalSteps) {
+                        currentStep++;
+                        updateStep();
+                    }
+                });
+                
+                // عرض الخصائص
+                document.getElementById('show-properties').addEventListener('click', showProperties);
+                
+                // اختيار الأدوات
+                document.querySelectorAll('.tool').forEach(tool => {
+                    tool.addEventListener('click', function() {
+                        document.querySelectorAll('.tool').forEach(t => t.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        const toolId = this.id;
+                        if (toolId === 'tool-compass') {
+                            showCompass();
+                        } else if (toolId === 'tool-ruler') {
+                            showRuler();
+                        } else if (toolId === 'tool-protractor') {
+                            showProtractor();
+                        }
+                    });
+                });
+                
+                // التحكم في المدور
+                document.getElementById('fix-compass').addEventListener('click', function() {
+                    isCompassFixed = !isCompassFixed;
+                    this.textContent = isCompassFixed ? 'تحرير المدور' : 'تثبيت المدور';
+                });
+                
+                // التحكم في الوضع
+                document.getElementById('manual-mode').addEventListener('click', function() {
+                    isManualMode = true;
+                    document.getElementById('manual-mode').classList.add('btn-secondary');
+                    document.getElementById('auto-mode').classList.remove('btn-secondary');
+                });
+                
+                document.getElementById('auto-mode').addEventListener('click', function() {
+                    isManualMode = false;
+                    document.getElementById('auto-mode').classList.add('btn-secondary');
+                    document.getElementById('manual-mode').classList.remove('btn-secondary');
+                });
+                
+                // التحكم في السرعة
+                document.getElementById('speed-control').addEventListener('input', function() {
+                    // سيتم استخدام قيمة السرعة في التحكم التلقائي
+                    console.log('سرعة الرسم: ' + this.value);
+                });
+                
+                // إعادة رسم الكانفاس عند تغيير حجم النافذة
+                window.addEventListener('resize', initCanvas);
+            }
+            
+            // تهيئة التطبيق
+            function initApp() {
+                initCanvas();
+                setupEventListeners();
+                updateStep();
+            }
+            
+            // بدء التطبيق
+            initApp();
+        });
+    </script>
+</body>
+</html>
